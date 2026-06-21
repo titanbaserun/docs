@@ -1,0 +1,89 @@
+export const metadata = {
+  title: "Quickstart",
+  description: "Install Titanbase, design a schema, and export it to your database of choice.",
+};
+
+# Quickstart
+
+This guide takes you from zero to an exported SQL schema in a few minutes.
+
+## Use the editor
+
+The fastest way to start is the visual editor — no install required.
+
+1. Open the [editor](https://app.titanbase.run).
+2. Start from a blank schema or pick a template.
+3. Add tables, columns, and relations on the canvas.
+4. Open the **Export** panel, choose a target, and copy or download the result.
+
+Your work is saved locally as a `.titan.json` file. There is no account and nothing is uploaded.
+
+## Run it locally
+
+To run the editor and tooling from source:
+
+```bash
+git clone https://github.com/titanbaserun/titanbase
+cd titanbase
+pnpm install
+pnpm dev
+```
+
+Requirements: Node.js 20+ and pnpm 9+.
+
+## Use the CLI
+
+The CLI is the headless path — ideal for CI and scripts.
+
+```bash
+# Validate a schema
+npx titanbase validate schema.titan.json
+
+# Export to PostgreSQL
+npx titanbase export schema.titan.json --target postgres
+
+# Export to multiple targets at once
+npx titanbase export schema.titan.json --target postgres,mysql,sqlite
+```
+
+See the [CLI reference](/cli) for all commands.
+
+## A minimal schema
+
+A `.titan.json` is just JSON. Here is a complete, valid two-table schema:
+
+```json
+{
+  "$schema": "https://titanbase.run/schema/v1.json",
+  "version": "1.0.0",
+  "name": "blog",
+  "tables": [
+    {
+      "name": "users",
+      "columns": [
+        { "name": "id", "type": "uuid", "primaryKey": true,
+          "default": { "kind": "function", "value": "gen_random_uuid()" } },
+        { "name": "email", "type": "string", "maxLength": 255, "unique": true, "nullable": false }
+      ]
+    },
+    {
+      "name": "posts",
+      "columns": [
+        { "name": "id", "type": "uuid", "primaryKey": true },
+        { "name": "author_id", "type": "uuid", "nullable": false },
+        { "name": "title", "type": "string", "maxLength": 200 }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from": { "table": "posts", "column": "author_id" },
+      "to": { "table": "users", "column": "id" },
+      "type": "many-to-one",
+      "onDelete": "cascade"
+    }
+  ]
+}
+```
+
+Next, learn how the pieces fit together in [Architecture](/concepts/architecture), or dive into the full [format reference](/format).

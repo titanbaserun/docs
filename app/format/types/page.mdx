@@ -1,0 +1,56 @@
+export const metadata = {
+  title: "Type system",
+  description: "Titanbase abstract column types and how they map to PostgreSQL, MySQL, and SQLite.",
+};
+
+# Type system
+
+Titanbase column types are **abstract**. A column declares a logical type like `string` or `uuid`, and each exporter maps it to a concrete type for its target. This is what lets a single `.titan.json` generate DDL for many databases.
+
+## Abstract types
+
+| Type | Description | Notable fields |
+|------|-------------|----------------|
+| `string` | Variable-length text | `maxLength` (optional → unbounded `TEXT`) |
+| `text` | Unbounded text | — |
+| `integer` | 32-bit integer | — |
+| `bigint` | 64-bit integer | — |
+| `float` | Floating point | — |
+| `decimal` | Fixed precision | `precision`, `scale` |
+| `boolean` | True / false | — |
+| `uuid` | UUID | — |
+| `timestamp` | Date + time (UTC) | — |
+| `date` | Date only | — |
+| `time` | Time only | — |
+| `json` | JSON data | — |
+| `binary` | Binary data | — |
+| `enum` | Enumerated values | `values` or `enumRef` |
+| `array` | Array of values | `arrayOf` |
+
+## Mapping to databases
+
+How each abstract type is rendered by the core exporters:
+
+| IR type | PostgreSQL | MySQL | SQLite |
+|---------|-----------|-------|--------|
+| `string` | `VARCHAR(n)` / `TEXT` | `VARCHAR(n)` / `TEXT` | `TEXT` |
+| `integer` | `INTEGER` | `INT` | `INTEGER` |
+| `bigint` | `BIGINT` | `BIGINT` | `INTEGER` |
+| `float` | `REAL` | `FLOAT` | `REAL` |
+| `decimal` | `DECIMAL(p,s)` | `DECIMAL(p,s)` | `REAL` |
+| `boolean` | `BOOLEAN` | `TINYINT(1)` | `INTEGER` |
+| `uuid` | `UUID` | `CHAR(36)` | `TEXT` |
+| `timestamp` | `TIMESTAMPTZ` | `DATETIME` | `TEXT` |
+| `date` | `DATE` | `DATE` | `TEXT` |
+| `time` | `TIME` | `TIME` | `TEXT` |
+| `json` | `JSONB` | `JSON` | `TEXT` |
+| `text` | `TEXT` | `TEXT` | `TEXT` |
+| `binary` | `BYTEA` | `BLOB` | `BLOB` |
+| `enum` | `CREATE TYPE` | `ENUM(...)` | `TEXT + CHECK` |
+| `array` | `type[]` | `JSON` | `TEXT` |
+
+<blockquote>
+When a target can't represent a type natively, the exporter chooses the closest safe equivalent and emits a warning. For example, SQLite has no native UUID, so `uuid` maps to <code>TEXT</code>.
+</blockquote>
+
+See [Exporters](/exporters) for per-target behavior and the [format reference](/format) for how to declare types on columns.

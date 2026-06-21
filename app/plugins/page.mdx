@@ -1,0 +1,66 @@
+export const metadata = {
+  title: "Plugin API",
+  description: "Build your own Titanbase exporter — a pure function from IR to output files.",
+};
+
+# Plugin API
+
+Every export target is a plugin: an independent package that converts the IR into target-specific output. Plugins are pure functions — IR in, files out — with no side effects, no network calls, and no state. This makes them the easiest way to extend Titanbase.
+
+## The interface
+
+```typescript
+import type { ExportPlugin, TitanSchema, ExportResult } from "@titanbase/core";
+
+export const myPlugin: ExportPlugin = {
+  name: "my-target",
+  displayName: "My Target DB",
+  irVersion: ">=1.0.0",
+
+  generate(schema: TitanSchema): ExportResult {
+    const ddl = schema.tables.map((table) => {
+      // Convert each table to your target's DDL or config
+      return `-- ${table.name}`;
+    });
+
+    return {
+      files: [{ path: "schema.sql", content: ddl.join("\n\n") }],
+      warnings: [],
+    };
+  },
+
+  validate(schema: TitanSchema) {
+    const warnings: string[] = [];
+    // Warn about IR features your target can't represent
+    return { valid: true, warnings };
+  },
+};
+```
+
+## Responsibilities
+
+A well-behaved exporter handles:
+
+1. **Type mapping** — convert abstract IR types to engine-specific types.
+2. **DDL generation** — `CREATE TABLE`, `CREATE INDEX`, and related statements.
+3. **Constraints** — foreign keys, checks, and unique constraints.
+4. **Defaults** — map IR default values to engine-specific syntax.
+5. **Target hints** — read your own key from `targetHints` and apply overrides.
+6. **Validation** — warn about IR features your target does not support.
+
+## Return shape
+
+```typescript
+interface ExportResult {
+  files: { path: string; content: string }[];
+  warnings: string[];
+}
+```
+
+Return one or more files. The editor's export panel and the CLI both consume this shape — copy to clipboard, download, or write to disk.
+
+## Distribute it
+
+A plugin is a standalone package. Publish it to npm so others can install and use your target. Use `packages/plugins/postgres/` in the repository as a complete reference implementation.
+
+Ready to contribute it upstream? See [Contributing](/contributing).

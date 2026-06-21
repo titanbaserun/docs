@@ -1,0 +1,44 @@
+import { Cards, Card, Callout } from "@/components/mdx";
+
+export const metadata = {
+  title: "Introduction",
+  description: "Titanbase is an open-source, local-first visual schema designer for relational databases.",
+};
+
+# Introduction
+
+**Titanbase** is an open-source, local-first visual schema designer for relational databases. Design your data model once, save it as a portable `.titan.json` file, and export production-ready SQL and developer-ready schema files to PostgreSQL, MySQL, SQLite, Prisma, Drizzle, and more.
+
+Your schema shouldn't be locked to one database, one ORM, or one tool. Titanbase separates the **model** from the **output**.
+
+```
+┌─────────────────┐     ┌──────────────┐     ┌──────────────────┐
+│  Visual Editor   │ ──▶ │  .titan.json │ ──▶ │  Export Plugin    │
+│  (replaceable)   │     │  (permanent) │     │  (pure transform) │
+└─────────────────┘     └──────────────┘     └──────────────────┘
+```
+
+- The **editor** is one way to create a `.titan.json` — but not the only way.
+- The **CLI** is optional — you can use the schema model directly as a library.
+- **Exporters** are pure functions: schema in, files out — easy to build, easy to swap.
+- **`.titan.json` is the permanent source of truth** — version-controllable, diffable, portable.
+
+## Start here
+
+<Cards>
+  <Card title="Quickstart" href="/quickstart">Install Titanbase and design your first schema in minutes.</Card>
+  <Card title="Architecture" href="/concepts/architecture">How the editor, IR, and exporters fit together.</Card>
+  <Card title=".titan.json format" href="/format">The canonical, field-by-field schema reference.</Card>
+  <Card title="Exporters" href="/exporters">Supported targets and platform presets.</Card>
+</Cards>
+
+## Why Titanbase
+
+- **Local-first** — your schemas live as files on your disk. No account, no cloud, works offline.
+- **Open source** — the editor, schema engine, exporters, and CLI are all open under Apache-2.0.
+- **Git-friendly** — deterministic JSON serialization produces clean, reviewable diffs.
+- **No lock-in** — the `.titan.json` format is documented and stable. Export to any target, anytime.
+
+<Callout type="tip">
+Titanbase is in active development. Star the <a href="https://github.com/titanbaserun/titanbase">repository</a> to follow progress, or jump straight into the <a href="https://app.titanbase.run">editor</a>.
+</Callout>

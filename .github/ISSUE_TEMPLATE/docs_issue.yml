@@ -1,0 +1,27 @@
+name: Documentation issue
+description: Report a problem or suggest an improvement to the docs
+title: "[docs]: "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+      description: Describe the issue — a typo, unclear section, outdated info, or missing content.
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: Which page does this affect?
+      placeholder: "/format or https://docs.titanbase.run/format"
+    validations:
+      required: false
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+      description: If you have one, describe how it could be fixed or worded.
+    validations:
+      required: false

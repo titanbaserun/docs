@@ -1,0 +1,80 @@
+export const metadata = {
+  title: "Exporters",
+  description: "Supported export targets and platform presets — PostgreSQL, MySQL, SQLite, Prisma, Drizzle, Mermaid, Neon, and Supabase.",
+};
+
+# Exporters
+
+An exporter is a pure function that turns a validated `.titan.json` into target-specific files. Every exporter takes the same IR and is fully independent, so you can switch targets at any time without changing your model.
+
+## Databases
+
+### PostgreSQL
+
+`@titanbase/export-postgres`
+
+- Native `UUID`, `JSONB`, and array types
+- `CREATE TYPE` for enums
+- Partial indexes with a `WHERE` clause
+- `GENERATED ALWAYS AS` for computed columns
+
+### MySQL
+
+`@titanbase/export-mysql`
+
+- Inline `ENUM(...)` syntax
+- `AUTO_INCREMENT` for auto-generated IDs
+- No native UUID — uses `CHAR(36)`
+- No partial indexes
+- `InnoDB` engine by default
+
+### SQLite
+
+`@titanbase/export-sqlite`
+
+- Limited type system — most types map to `TEXT`, `INTEGER`, `REAL`, `BLOB`
+- `CHECK` constraints for enum validation
+- No `ALTER COLUMN` — schema changes recreate the table
+- Foreign keys require `PRAGMA foreign_keys = ON`
+
+## Schema-as-code
+
+### Prisma
+
+`@titanbase/export-prisma` — generates a `schema.prisma` with models, fields, relations, and enums derived from the IR.
+
+### Drizzle
+
+`@titanbase/export-drizzle` — generates a Drizzle (PostgreSQL) schema in TypeScript.
+
+## Diagrams
+
+### Mermaid
+
+`@titanbase/export-mermaid` — generates a Mermaid `erDiagram` for embedding in Markdown and docs.
+
+## Platform presets
+
+Neon and Supabase are **presets** layered on top of the PostgreSQL exporter, not separate engines.
+
+### Neon
+
+- Full Postgres DDL (delegates to the Postgres exporter)
+- Serverless driver compatibility notes
+- Connection string config scaffold
+- Branching metadata from target hints
+
+### Supabase
+
+- Full Postgres DDL (delegates to the Postgres exporter)
+- `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` per table
+- Basic policy scaffold from `targetHints.supabase`
+- `auth.users()` foreign-key support for auth columns
+
+Because presets call the Postgres exporter internally, any Postgres improvement flows to both automatically.
+
+## Warnings
+
+When a target cannot fully represent a feature (a partial index in MySQL, a native UUID in SQLite), the exporter emits a warning rather than failing. Warnings are returned alongside the generated files so you can review them before applying the schema.
+
+Want a target that isn't here? Build one with the [Plugin API](/plugins).

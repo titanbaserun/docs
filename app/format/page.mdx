@@ -1,0 +1,264 @@
+export const metadata = {
+  title: ".titan.json format",
+  description: "The canonical reference for the Titanbase IR format, version 1.",
+};
+
+# .titan.json format
+
+The Titanbase IR is a JSON format that describes a database schema in a target-agnostic way. It is the single source of truth shared by the editor, CLI, and exporters. This page is the canonical reference for **IR v1**.
+
+## File convention
+
+- Extension: `.titan.json`
+- Encoding: UTF-8
+- Serialization: deterministic — keys sorted alphabetically at every level
+- Top level: a single JSON object
+
+## Root object
+
+```json
+{
+  "$schema": "https://titanbase.run/schema/v1.json",
+  "version": "1.0.0",
+  "name": "my-project",
+  "description": "Optional project description",
+  "tables": [],
+  "relations": [],
+  "enums": [],
+  "targetHints": {},
+  "metadata": {}
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `$schema` | string | Yes | JSON Schema URL for validation |
+| `version` | string | Yes | IR format version (semver) |
+| `name` | string | Yes | Project identifier (kebab-case) |
+| `description` | string | No | Human-readable description |
+| `tables` | Table[] | Yes | Table definitions |
+| `relations` | Relation[] | Yes | Relations (may be empty `[]`) |
+| `enums` | EnumDef[] | No | Shared enum type definitions |
+| `targetHints` | object | No | Per-target overrides |
+| `metadata` | object | No | Editor state and timestamps |
+
+## Tables
+
+```json
+{
+  "name": "users",
+  "description": "Application users",
+  "columns": [],
+  "indexes": [],
+  "checks": []
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Table name (snake_case) |
+| `description` | string | No | Human-readable description |
+| `columns` | Column[] | Yes | At least one column required |
+| `indexes` | Index[] | No | Secondary indexes |
+| `checks` | CheckConstraint[] | No | Table-level check constraints |
+| `targetHints` | object | No | Per-target table overrides |
+
+**Naming rules:** `snake_case`, lowercase, 1–63 characters, must start with a letter, characters `a-z 0-9 _`, unique within the schema.
+
+## Columns
+
+```json
+{
+  "name": "email",
+  "type": "string",
+  "maxLength": 255,
+  "nullable": false,
+  "unique": true,
+  "default": { "kind": "literal", "value": "'unknown'" },
+  "description": "User email address"
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | Yes | — | Column name (snake_case) |
+| `type` | IRType | Yes | — | Abstract column type |
+| `nullable` | boolean | No | `true` | Allow NULL values |
+| `primaryKey` | boolean | No | `false` | Part of the primary key |
+| `unique` | boolean | No | `false` | Unique constraint |
+| `default` | DefaultValue | No | — | Default value |
+| `description` | string | No | — | Human-readable description |
+| `maxLength` | number | No | — | For `string` |
+| `precision` | number | No | — | For `decimal` |
+| `scale` | number | No | — | For `decimal` |
+| `values` | string[] | No | — | Inline `enum` values |
+| `enumRef` | string | No | — | Reference to a shared enum |
+| `arrayOf` | IRType | No | — | For `array` |
+
+See the [type system](/format/types) for the full list of abstract types and how they map to each database.
+
+## Enums
+
+Shared enum definitions can be reused across columns:
+
+```json
+{
+  "enums": [
+    { "name": "status", "values": ["draft", "published", "archived"] }
+  ]
+}
+```
+
+Reference one from a column via `enumRef`:
+
+```json
+{ "name": "status", "type": "enum", "enumRef": "status" }
+```
+
+**Type resolution priority:** `enumRef` → inline `values` → the `type` field.
+
+## Relations
+
+```json
+{
+  "name": "posts_author",
+  "from": { "table": "posts", "column": "author_id" },
+  "to": { "table": "users", "column": "id" },
+  "type": "many-to-one",
+  "onDelete": "cascade",
+  "onUpdate": "no-action"
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | No | auto | Relation identifier |
+| `from` | TableColumn | Yes | — | FK side (child) |
+| `to` | TableColumn | Yes | — | PK side (parent) |
+| `type` | RelationType | Yes | — | Cardinality |
+| `onDelete` | FKAction | No | `no-action` | Delete behavior |
+| `onUpdate` | FKAction | No | `no-action` | Update behavior |
+
+**Relation types:** `one-to-one`, `one-to-many`, `many-to-one`, `many-to-many`.
+
+**FK actions:** `cascade`, `set-null`, `restrict`, `no-action`.
+
+### Many-to-many join tables
+
+For `many-to-many` relations, you can override the join table:
+
+```json
+{
+  "type": "many-to-many",
+  "from": { "table": "posts", "column": "id" },
+  "to": { "table": "tags", "column": "id" },
+  "joinTable": {
+    "name": "posts_tags",
+    "extraColumns": [
+      { "name": "assigned_at", "type": "timestamp",
+        "default": { "kind": "function", "value": "now()" } }
+    ]
+  }
+}
+```
+
+If `joinTable` is omitted, exporters generate a default join table named `{from_table}_{to_table}` with two FK columns and a composite primary key.
+
+## Indexes
+
+```json
+{
+  "name": "idx_users_email",
+  "columns": ["email"],
+  "unique": true,
+  "where": "deleted_at IS NULL"
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | No | auto | Index name |
+| `columns` | string[] | Yes | — | Column names (order matters) |
+| `unique` | boolean | No | `false` | Unique index |
+| `where` | string | No | — | Partial index condition (PostgreSQL / SQLite only) |
+
+## Check constraints
+
+```json
+{ "name": "chk_positive_price", "expression": "price > 0" }
+```
+
+Expressions use SQL syntax. Each exporter validates compatibility with its target.
+
+## Default values
+
+```json
+{ "kind": "literal", "value": "'active'" }
+{ "kind": "literal", "value": "0" }
+{ "kind": "function", "value": "now()" }
+{ "kind": "function", "value": "gen_random_uuid()" }
+{ "kind": "expression", "value": "price * 0.1" }
+```
+
+Exporters map function names to target-specific equivalents — for example `now()` becomes `NOW()` in MySQL and `datetime('now')` in SQLite.
+
+## Target hints
+
+Target hints carry engine-specific overrides without polluting the core schema. Each exporter reads only its own key and silently ignores the rest.
+
+```json
+{
+  "targetHints": {
+    "supabase": {
+      "rls": {
+        "users": {
+          "enabled": true,
+          "policies": [
+            { "name": "users_own_data", "operation": "ALL", "using": "auth.uid() = id" }
+          ]
+        }
+      }
+    },
+    "neon": { "branching": { "defaultBranch": "main" } }
+  }
+}
+```
+
+## Metadata
+
+Editor-only data that does not affect schema semantics. It is **never** read by exporters.
+
+```json
+{
+  "metadata": {
+    "createdAt": "2026-04-10T12:00:00Z",
+    "updatedAt": "2026-04-10T14:30:00Z",
+    "editor": {
+      "canvasZoom": 1.0,
+      "tablePositions": {
+        "users": { "x": 100, "y": 200 },
+        "posts": { "x": 400, "y": 200 }
+      },
+      "tableColors": { "users": "#4A90D9" }
+    }
+  }
+}
+```
+
+## Validation rules
+
+A valid `.titan.json` must satisfy all of the following:
+
+1. All required fields are present.
+2. `version` is a valid semver string.
+3. All table names are unique.
+4. All column names are unique within their table.
+5. Each table has at least one column.
+6. At most one primary key configuration per table (single or composite).
+7. All relation references point to existing tables and columns.
+8. All `enumRef` values reference existing entries in `enums[]`.
+9. All `arrayOf` values are valid IR types.
+10. All index `where` expressions are syntactically valid SQL fragments.
+11. No circular `many-to-many` join table references.
+
+Validation is performed by `@titanbase/core` and is a prerequisite for export.

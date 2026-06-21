@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f8faf8;
+  --color-ink: #172019;
+  --color-muted: #67716a;
+  --color-line: #dce2dd;
+  --color-panel: #ffffff;
+  --color-accent: #eaf8ee;
+  --color-accent-ink: #078b37;
+  --color-brand: #0bad45;
+  --color-brand-hover: #078b37;
+
+  --color-ink-900: #111118;
+  --color-ink-800: #171720;
+  --color-ink-line: #2a2a36;
+  --color-blue: #3b82f6;
+
+  --font-sans: "Google Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-funnel), "Google Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+}
+
+.tb-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-line) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-line) 60%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+}

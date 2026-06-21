@@ -1,0 +1,68 @@
+export const metadata = {
+  title: "CLI",
+  description: "The Titanbase command-line interface for validating, exporting, importing, and diffing schemas.",
+};
+
+# CLI
+
+The CLI provides headless access to the same schema engine and exporters the editor uses — ideal for terminal workflows and CI/CD. It is built on the public `@titanbase/core` API.
+
+```bash
+npx titanbase <command> [options]
+```
+
+## validate
+
+Validate a schema against the IR rules. Exits non-zero on failure, so it works well as a CI gate.
+
+```bash
+titanbase validate schema.titan.json
+```
+
+## export
+
+Generate target-specific files from a schema.
+
+```bash
+# Single target
+titanbase export schema.titan.json --target postgres
+
+# Multiple targets
+titanbase export schema.titan.json --target postgres,mysql,sqlite
+
+# Platform preset
+titanbase export schema.titan.json --target supabase
+```
+
+Available targets include `postgres`, `mysql`, `sqlite`, `prisma`, `drizzle`, `mermaid`, and the `neon` and `supabase` presets.
+
+## import
+
+Bring an existing schema into the IR.
+
+```bash
+# From a SQL file
+titanbase import --from sql schema.sql
+
+# From a Prisma schema
+titanbase import --from prisma prisma/schema.prisma
+
+# From a live database (introspection)
+titanbase import --from postgres --connection <url>
+```
+
+Unsupported statements are reported as import warnings; the importer preserves comments, defaults, indexes, enums, and referential actions where possible.
+
+## diff
+
+Compare two schema versions structurally.
+
+```bash
+titanbase diff old.titan.json new.titan.json
+```
+
+The diff reports added, removed, and changed objects with stable object matching and basic rename detection.
+
+<blockquote>
+The CLI ships alongside the stabilized public API. Until then, the same operations are available by importing <code>@titanbase/core</code> and the exporter packages directly.
+</blockquote>
