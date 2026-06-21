@@ -1,66 +1,83 @@
+import { Callout, Status } from "@/components/mdx";
+
 export const metadata = {
   title: "Plugin API",
-  description: "Build your own Titanbase exporter — a pure function from IR to output files.",
+  description: "Write a Titanbase exporter — a pure function from TitanSchema to output files.",
 };
 
 # Plugin API
 
-Every export target is a plugin: an independent package that converts the IR into target-specific output. Plugins are pure functions — IR in, files out — with no side effects, no network calls, and no state. This makes them the easiest way to extend Titanbase.
+<Status value="Experimental" />
 
-## The interface
+An exporter is a pure function that converts a `TitanSchema` into target-specific output: schema in, files out, no side effects. This is the easiest way to extend Titanbase.
+
+<Callout type="warning">
+The exporter contract is <strong>experimental</strong>. There is no formal <code>ExportPlugin</code> registration interface yet — exporters are plain functions — and the shared <code>ExportResult</code> shape may still change. Treat this as an internal contract and expect breaking changes; pin your dependency versions. Importer, diff, and CLI plugin APIs do not exist yet.
+</Callout>
+
+## The contract
+
+Today, an exporter is a function that takes a `TitanSchema` and returns results. Most exporters use the shared `ExportResult` type from `@titanbase/core`:
 
 ```typescript
-import type { ExportPlugin, TitanSchema, ExportResult } from "@titanbase/core";
+import type { TitanSchema, ExportResult, ExportWarning } from "@titanbase/core";
 
-export const myPlugin: ExportPlugin = {
-  name: "my-target",
-  displayName: "My Target DB",
-  irVersion: ">=1.0.0",
+export function exportMyTarget(schema: TitanSchema): ExportResult {
+  const warnings: ExportWarning[] = [];
 
-  generate(schema: TitanSchema): ExportResult {
-    const ddl = schema.tables.map((table) => {
-      // Convert each table to your target's DDL or config
-      return `-- ${table.name}`;
-    });
+  const content = schema.tables
+    .map((table) => `-- ${table.name}`)
+    .join("\n");
 
-    return {
-      files: [{ path: "schema.sql", content: ddl.join("\n\n") }],
-      warnings: [],
-    };
-  },
-
-  validate(schema: TitanSchema) {
-    const warnings: string[] = [];
-    // Warn about IR features your target can't represent
-    return { valid: true, warnings };
-  },
-};
+  return {
+    files: [{ path: "schema.txt", content }],
+    warnings,
+  };
+}
 ```
+
+The shared result types are:
+
+```typescript
+interface ExportFile {
+  path: string;
+  content: string;
+}
+
+interface ExportWarning {
+  code: string;
+  message: string;
+  path?: string;
+}
+
+interface ExportResult {
+  files: ExportFile[];
+  warnings: ExportWarning[];
+}
+```
+
+<Callout type="note">
+The built-in PostgreSQL exporter currently returns a different shape — `{ sql: string; warnings: string[] }` — for historical reasons. New exporters should prefer the shared `ExportResult` shape used by the Mermaid, Prisma, and Drizzle exporters.
+</Callout>
 
 ## Responsibilities
 
 A well-behaved exporter handles:
 
-1. **Type mapping** — convert abstract IR types to engine-specific types.
-2. **DDL generation** — `CREATE TABLE`, `CREATE INDEX`, and related statements.
-3. **Constraints** — foreign keys, checks, and unique constraints.
-4. **Defaults** — map IR default values to engine-specific syntax.
-5. **Target hints** — read your own key from `targetHints` and apply overrides.
-6. **Validation** — warn about IR features your target does not support.
+1. **Type mapping** — map each column's `type` (and `nativeType`) to a target type, with a safe fallback.
+2. **Output generation** — produce the DDL, schema code, or diagram for the target.
+3. **Constraints** — primary keys, unique constraints, foreign keys, and indexes where the target supports them.
+4. **Defaults** — translate the column `default` string into the target's syntax where possible.
+5. **Warnings** — emit a warning (rather than failing) when the target can't represent a feature, and choose a safe fallback.
 
-## Return shape
+Look to the existing exporter packages (`@titanbase/export-mermaid`, `@titanbase/export-prisma`, `@titanbase/export-drizzle`) as reference implementations.
 
-```typescript
-interface ExportResult {
-  files: { path: string; content: string }[];
-  warnings: string[];
-}
-```
+## Determinism and safety
 
-Return one or more files. The editor's export panel and the CLI both consume this shape — copy to clipboard, download, or write to disk.
+- Be a pure function: same schema in, same output out. No network calls, no global state.
+- Quote or sanitize identifiers for the target so generated output is always valid.
+- Never throw on a recoverable problem — skip the affected object and add a warning so the rest of the output stays usable.
 
 ## Distribute it
 
-A plugin is a standalone package. Publish it to npm so others can install and use your target. Use `packages/plugins/postgres/` in the repository as a complete reference implementation.
-
-Ready to contribute it upstream? See [Contributing](/contributing).
+An exporter is a standalone package. Until the contract stabilizes, keep it pinned to a specific `@titanbase/core` version. Ready to contribute it upstream? See [Contributing](/contributing).

@@ -1,93 +1,104 @@
+import { Callout, Status } from "@/components/mdx";
+
 export const metadata = {
   title: "Architecture",
-  description: "Titanbase follows a three-layer architecture where the .titan.json IR is the permanent source of truth.",
+  description: "Titanbase separates the editor, the @titanbase/core schema engine, and the exporters. The .titan.json file is your source of truth.",
 };
 
 # Architecture
 
-Titanbase is a relational schema platform built on a three-layer architecture. The intermediate representation (IR) — the `.titan.json` file — is the permanent source of truth.
+Titanbase is a local-first visual schema designer. It separates three concerns: the **editor** that you interact with, the **core** that owns the schema model and validation, and the **exporters** that turn a schema into target-specific output. The `.titan.json` file is your source of truth.
 
 ```
-Visual Editor  →  .titan.json (IR)  →  Export Plugins
- (replaceable)     (permanent)          (pure transforms)
+Visual Editor  →  .titan.json  →  Exporters
+                  (your file)      (pure transforms)
 ```
 
 Each layer is independent:
 
-- The **editor** is one way to create the IR — you can also write `.titan.json` by hand or generate it programmatically.
-- The **CLI** is optional — plugins can be called directly as library functions.
-- **Plugins** are pure transforms: IR in, target-specific output out. No side effects, no state.
-- **`.titan.json` is the permanent artifact** — everything else is tooling around it.
+- The **editor** is one way to create a `.titan.json` — you can also write or generate it programmatically.
+- **`@titanbase/core`** owns the schema types, normalization, validation, and diagnostics.
+- **Exporters** are pure transforms: a `TitanSchema` in, deterministic output (with warnings) out. No network calls, no state.
 
-This separation means the editor can be replaced, the CLI can be skipped, and new output targets can be added without touching anything else.
+The local product never requires the cloud.
 
-## The IR
+## @titanbase/core
 
-The IR describes a relational schema in a target-agnostic way. Its design follows five principles:
+`@titanbase/core` is the heart of the project. It owns:
 
-1. **Relational by design** — it models tables, columns, relations, indexes, and constraints. It deliberately does not model documents, key-value stores, or API-first databases.
-2. **Target-agnostic by default** — column types are abstract (`string`, `integer`, `uuid`, `timestamp`), not engine-specific (`VARCHAR(255)`, `SERIAL`). Plugins map them to concrete types.
-3. **Target hints when needed** — engine-specific behavior (Supabase RLS, Neon branching) lives in optional `targetHints` blocks that relevant plugins read and others ignore.
-4. **Version-controllable** — deterministically serialized with sorted keys, human-readable and diffable.
-5. **Validatable** — a published JSON Schema (`$schema`) allows static validation before any export step.
+- the **schema types** (`TitanSchema` and friends) that define the `.titan.json` structure;
+- the **Zod schemas** that parse and structurally validate a file;
+- **diagnostics** — semantic checks beyond structural parsing (see [Diagnostics](/diagnostics));
+- **normalization** — a canonical form that trims strings and sorts tables, enums, and relations by name;
+- the shared **export result types** (`ExportFile`, `ExportWarning`, `ExportResult`) that exporters return.
 
-Read the full [IR model](/concepts/ir) and the [format reference](/format).
+React and editor code display schema state and diagnostics, but they do not own core validation logic — that lives in `@titanbase/core` so every consumer (editor and exporters) shares one source of truth.
 
-## Export plugins
+## The schema model
 
-Each target is an independent plugin implementing a small interface:
+The schema describes a relational database in a target-oriented but portable way:
+
+- **Tables** hold columns and indexes.
+- **Columns** are typed fields with `nullable`, `primaryKey`, `unique`, and an optional string `default`.
+- **Relations** are foreign-key relationships with a cardinality and referential actions. They support composite (multi-column) keys.
+- **Enums** are shared value lists, referenced by a column's `type`.
+- A top-level **`dialect`** (`postgres`, `mysql`, `sqlite`, or `generic`) tells diagnostics which types to recognize.
+- **`metadata.editor`** holds editor-only data such as table positions, separate from the schema itself.
+
+See the full [`.titan.json` format reference](/format) and the [type system](/format/types).
+
+## Exporters
+
+Each target is an independent function that takes a `TitanSchema` and returns its output:
 
 ```typescript
-interface ExportPlugin {
-  name: string;
-  displayName: string;
-  irVersion: string;
-  generate(schema: TitanSchema, options?: PluginOptions): ExportResult;
-  validate(schema: TitanSchema): ValidationResult;
-}
+import type { TitanSchema, ExportResult } from "@titanbase/core";
 
-interface ExportResult {
-  files: OutputFile[];
-  warnings: string[];
-}
+// Mermaid, Prisma, and Drizzle return ExportResult:
+//   { files: { path: string; content: string }[]; warnings: ExportWarning[] }
+export function exportMermaid(schema: TitanSchema): ExportResult;
 ```
 
-Plugins are pure functions. They take IR and return files — no network calls, no state. Their responsibilities are type mapping, DDL generation, constraints, defaults, reading target hints, and warning about unsupported features.
+Exporters are pure functions. Their responsibilities are type mapping, output generation, applying constraints and defaults where the target supports them, and emitting warnings for features the target cannot represent. See [Exporters](/exporters) and the [Plugin API](/plugins).
 
-### Platform presets
-
-Neon and Supabase are not standalone exporters — they are **presets** that extend the PostgreSQL plugin:
-
-```
-PostgreSQL Plugin
-├── Neon Preset     → Postgres DDL + serverless connection config
-└── Supabase Preset → Postgres DDL + RLS enable + policy scaffold
-```
-
-Presets call the Postgres plugin internally and add platform-specific output on top, so Postgres improvements flow to both automatically. See [Exporters](/exporters).
+<Callout type="note">
+The PostgreSQL exporter currently returns a slightly different shape — `{ sql: string; warnings: string[] }` — while Mermaid, Prisma, and Drizzle return the shared `ExportResult`. The [Exporters](/exporters) page documents each one.
+</Callout>
 
 ## Visual editor
 
-The editor is a React application with a canvas-based view of the schema. Crucially, **the editor state is the IR itself**. Every visual action — drag a table, add a column, create a relation — is a mutation on the IR, and the canvas renders from it.
+The editor is a React application with a canvas view of the schema. Editor state **is** the schema — every visual action mutates the schema, and the canvas renders from it.
 
-- Undo/redo is IR snapshot history.
-- Save is IR serialization to `.titan.json`.
-- Export uses the same IR the canvas displays.
-
-Visual-only data (table positions, zoom, colors) lives in `metadata.editor`, separate from the schema, so two developers can have different layouts of the same schema without conflicts.
+- Save serializes the schema to `.titan.json`.
+- Export runs the same schema the canvas displays through an exporter.
+- Visual-only data (table positions) lives in `metadata.editor`, keyed by table id, so layout never pollutes the schema's meaning.
 
 ## Packages
 
+These packages are implemented today:
+
 | Package | Responsibility |
 |---------|----------------|
-| `@titanbase/core` | IR types, validation, schema operations |
+| `@titanbase/core` | Schema types, normalization, validation, diagnostics, export result types |
 | `@titanbase/editor` | Visual editor (React) |
+| `@titanbase/ui` | Shared UI components |
+| `@titanbase/export-postgres` | PostgreSQL SQL exporter |
+| `@titanbase/export-mermaid` | Mermaid ER diagram exporter |
+| `@titanbase/export-prisma` | Prisma schema exporter |
+| `@titanbase/export-drizzle` | Drizzle (PostgreSQL) schema exporter |
+| `apps/web` | The web application that hosts the editor |
+
+### Planned packages
+
+<Status value="Planned" />
+
+These are on the roadmap and **not implemented yet**:
+
+| Package | Responsibility |
+|---------|----------------|
+| `@titanbase/import-postgres` | PostgreSQL `.sql` → schema importer |
+| `@titanbase/diff` | Structural schema diff |
 | `@titanbase/cli` | Command-line tool |
-| `@titanbase/export-postgres` | PostgreSQL exporter |
+| `@titanbase/export-dbml` | DBML exporter |
 | `@titanbase/export-mysql` | MySQL exporter |
 | `@titanbase/export-sqlite` | SQLite exporter |
-| `@titanbase/export-prisma` | Prisma schema exporter |
-| `@titanbase/export-drizzle` | Drizzle schema exporter |
-| `@titanbase/export-mermaid` | Mermaid ER diagram exporter |
-| `@titanbase/import-sql` | SQL → IR importer |
-| `@titanbase/diff` | Structural schema diff |

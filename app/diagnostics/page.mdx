@@ -1,0 +1,83 @@
+import { Callout, Status } from "@/components/mdx";
+
+export const metadata = {
+  title: "Diagnostics",
+  description: "How Titanbase validates schemas locally — severity levels, common diagnostics, and how they differ from exporter warnings.",
+};
+
+# Diagnostics
+
+<Status value="Available" />
+
+Titanbase validates your schema before you export. Diagnostics run **locally** in `@titanbase/core` — nothing is uploaded, and validation does not change your schema. They tell you what to fix and what to watch out for.
+
+- **Errors** must be fixed before you export — they indicate a schema that isn't valid.
+- **Warnings** flag portability, safety, or exporter-limitation concerns. Output can still be generated.
+- **Info** messages are non-blocking hints.
+
+`validateTitanSchema(input)` returns `{ success, data, diagnostics }`; `success` is `false` when any diagnostic has `error` severity. `diagnoseSchema(input)` returns the full list directly.
+
+## Severity levels
+
+| Severity | Meaning | Blocks export? |
+|----------|---------|----------------|
+| **Error** | The schema is invalid or unsafe. | Yes — fix before exporting. |
+| **Warning** | Portability or safety concern, or an exporter limitation. | No. |
+| **Info** | Non-blocking hint. | No. |
+
+Each diagnostic carries a stable `code`, a `message`, a `path` into the schema, entity references (such as `tableId` or `columnId`), and an optional `help` hint.
+
+## Common diagnostics
+
+A selection of the checks `@titanbase/core` performs. This is not the complete list.
+
+### Errors
+
+- **Nullable primary key** (`column.nullable-primary-key`) — a primary-key column is marked nullable.
+- **Duplicate names** (`table.duplicate-name`, `column.duplicate-name`, `enum.duplicate-name`, `relation.duplicate-name`) — names must be unique in their scope.
+- **Duplicate ids** (`table.duplicate-id`, `column.duplicate-id`, and similar) — ids must be unique.
+- **Missing enum reference** (`column.missing-enum`) — a column's `type` looks like an enum but no matching enum exists.
+- **Invalid enum reference** (`column.invalid-enum`) — the referenced enum itself has errors.
+- **Relation target missing** (`relation.invalid-table`, `relation.invalid-column`) — a relation points at a table or column that doesn't exist.
+- **FK type mismatch** (`relation.type-mismatch`) — a relation connects columns of incompatible types.
+- **Non-unique relation target** (`relation.non-unique-target`) — the referenced columns are not a primary key or unique constraint.
+- **Mismatched relation columns** (`relation.column-count`) — `from` and `to` have a different number of columns.
+- **Control characters in identifiers** (`table.invalid-name`, `column.invalid-name`, `enum.invalid-name`).
+
+### Warnings
+
+- **Missing primary key** (`table.no-primary-key`) — a table has no primary key.
+- **Nullable unique column** (`column.nullable-unique`) — may allow multiple NULLs depending on the database.
+- **Unknown type** (`column.unknown-type`) — a column type isn't recognized for the dialect and isn't an enum or `nativeType`.
+- **Default type mismatch** (`column.default-type-mismatch`) — a default doesn't look valid for the column type.
+- **FK without index** (`relation.unindexed-foreign-key`) — foreign-key columns aren't indexed.
+- **SET NULL on non-nullable FK** (`relation.set-null-non-nullable`) — `ON DELETE`/`ON UPDATE SET NULL` with non-nullable foreign-key columns.
+- **Partial index outside PostgreSQL** (`index.partial-dialect`) — a `where` predicate when the dialect isn't `postgres`.
+- **Unsupported index method** (`index.unsupported-method`) — the index method isn't valid for the dialect.
+- **Bare many-to-many** (`relation.many-to-many`) — usually better modeled with an explicit join table.
+- **Unsafe identifiers** (`table.unsafe-name`, `column.unsafe-name`, `enum.unsafe-name`, `enum.unsafe-value`) — names that aren't lowercase `snake_case` may need SQL quoting or ORM name mapping.
+- **Stale / missing editor positions** (`metadata.invalid-table`, `metadata.missing-position`).
+
+### Info
+
+- **Composite relation portability** (`relation.composite-portability`) — composite relations may need manual adjustment in some ORM exporters.
+
+## Diagnostics vs. exporter warnings
+
+There are two layers of feedback, and both run locally:
+
+- **Diagnostics** are general schema checks from `@titanbase/core`. They apply regardless of which target you export to.
+- **Exporter warnings** are **target-specific**. They appear when you run a specific exporter and it can't fully represent something (for example, a partial index in Prisma, or a self-referencing foreign key in Drizzle). See [Exporters](/exporters).
+
+Neither layer involves the cloud.
+
+## Template quality
+
+<Status value="Available" />
+
+The example templates in `examples/` are held to a simple standard:
+
+- a template must have **no validation errors**;
+- warnings are acceptable **only when they're intentional** (for example, a deliberately denormalized design).
+
+When you add or change a template, validate it and review the diagnostics before opening a pull request — see [Contributing](/contributing).

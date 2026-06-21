@@ -1,56 +1,97 @@
+import { Callout } from "@/components/mdx";
+
 export const metadata = {
   title: "Contributing",
-  description: "How to set up Titanbase locally and contribute code, exporters, and docs.",
+  description: "Set up Titanbase locally and contribute code, exporters, templates, and docs.",
 };
 
 # Contributing
 
-Titanbase is built in the open and contributions are welcome. This page covers setup and the contribution workflow.
+Titanbase is built in the open under Apache-2.0, and contributions are welcome. This page covers local setup and the contribution workflow.
 
 ## Prerequisites
 
 - Node.js 20+
-- pnpm 9+
+- pnpm (for the core monorepo)
 - Git
 
-## Setup
+## Run the app and packages
+
+The editor, schema engine, and exporters live in the core monorepo:
 
 ```bash
 git clone https://github.com/titanbaserun/titanbase
 cd titanbase
 pnpm install
-pnpm test       # run the test suite
-pnpm dev        # start the editor in dev mode
+pnpm dev          # start the web app (editor) in dev mode
+```
+
+## Run the tests
+
+```bash
+pnpm test         # run the test suite
+pnpm typecheck    # type-check the workspace
+pnpm build        # build all packages
+```
+
+## Run the docs locally
+
+The documentation site is a separate Next.js project:
+
+```bash
+cd docs
+npm install
+npm run dev       # serve the docs locally
+npm run build     # production build
+npm run typecheck
 ```
 
 ## Ways to contribute
 
+### Add a new exporter
+
+Exporters are the easiest way to contribute — each is a pure function from `TitanSchema` to output. Implement it against the [Plugin API](/plugins) and use the existing `@titanbase/export-mermaid`, `@titanbase/export-prisma`, and `@titanbase/export-drizzle` packages as references. Add tests that cover type mapping, constraints, and warning behavior.
+
+### Add or update templates
+
+Templates live in `examples/`. A template is a valid `.titan.json`. When adding one:
+
+- give it a clear, real-world domain;
+- make sure it has **no validation errors**;
+- only leave warnings when they are intentional (see [template quality](/diagnostics#template-quality)).
+
+### Add a diagnostic
+
+Schema checks live in `@titanbase/core` (`diagnostics.ts`). When adding a check, give it a stable `code`, the right `severity` (error / warning / info), a clear message, and a `help` hint where useful. Add tests for both the passing and failing cases, and document it on the [Diagnostics](/diagnostics) page.
+
+### Keep `.titan.json` docs in sync
+
+When the schema types or Zod schemas in `@titanbase/core` change, update the [`.titan.json` format reference](/format) and [type system](/format/types) so the documented shape matches the code. The docs should never claim a field or type the code does not support.
+
 ### Report a bug
 
-Open an issue with a description, steps to reproduce, expected vs. actual behavior, and your `.titan.json` if relevant (you can anonymize table and column names).
+Open an issue with a description, steps to reproduce, expected vs. actual behavior, and your `.titan.json` if relevant (anonymize names as needed).
 
 ### Suggest a feature
 
-Open an issue tagged `feature-request`. Describe the use case first, then the proposed solution — we value understanding the *why* before the *how*.
+Open an issue tagged `feature-request`. Describe the use case first, then the proposed solution.
 
-### Write an exporter
-
-Exporters are the easiest way to contribute. Each is a standalone package implementing the [Plugin API](/plugins). See `packages/plugins/postgres/` for a reference implementation.
+<Callout type="warning">
+This is an open-source, local-first MVP. Please avoid adding cloud, auth, billing, AI, or live-database features without discussing them first — they are not part of the current product, and docs should never present planned features as available.
+</Callout>
 
 ## Submitting code
 
 1. Fork the repository.
 2. Create a branch from `main`: `git checkout -b feat/my-feature`.
 3. Make your changes and add or update tests.
-4. Run `pnpm test` and `pnpm lint`.
+4. Run `pnpm test`, `pnpm typecheck`, and `pnpm build`.
 5. Open a pull request against `main`.
-
-All PRs require review before merge, and history is kept clean with squash merges.
 
 ## Code style
 
 - TypeScript strict mode
-- No `any` — prefer `unknown` with type narrowing
+- Prefer `unknown` with narrowing over `any`
 - Functional style over classes
 - Tests with Vitest; format with Prettier; lint with ESLint
 
@@ -59,10 +100,10 @@ All PRs require review before merge, and history is kept clean with squash merge
 Follow conventional commits:
 
 ```
-feat(core): add enum support to the IR type system
-fix(pg): handle nullable UUID columns
-docs: clarify many-to-many join tables
-test(mysql): cover inline enum generation
+feat(core): add enum support to the schema model
+fix(pg): handle nullable uuid columns
+docs: clarify many-to-many relations
+test(prisma): cover enum value mapping
 ```
 
 ## License

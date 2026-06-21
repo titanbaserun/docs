@@ -29,6 +29,24 @@ export function Card({ title, href, children }: { title: string; href: string; c
   );
 }
 
+const statusStyles = {
+  Available: { bg: "bg-[#e7f6ec]", text: "text-[#1a7f3c]", ring: "ring-[#1a7f3c]/20", dot: "bg-[#1a7f3c]" },
+  Planned: { bg: "bg-[#eef1f5]", text: "text-[#586174]", ring: "ring-[#586174]/20", dot: "bg-[#8a93a6]" },
+  Experimental: { bg: "bg-[#fff3df]", text: "text-[#9a6b12]", ring: "ring-[#9a6b12]/20", dot: "bg-[#d99a26]" },
+} as const;
+
+export function Status({ value }: { value: keyof typeof statusStyles }) {
+  const s = statusStyles[value];
+  return (
+    <span
+      className={`my-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${s.bg} ${s.text} ${s.ring}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+      Status: {value}
+    </span>
+  );
+}
+
 const calloutStyles = {
   note: { bar: "border-blue", bg: "bg-blue/5", label: "Note", labelColor: "text-blue" },
   tip: { bar: "border-brand", bg: "bg-accent/60", label: "Tip", labelColor: "text-accent-ink" },

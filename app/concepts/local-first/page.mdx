@@ -1,0 +1,48 @@
+import { Callout, Status } from "@/components/mdx";
+
+export const metadata = {
+  title: "Local-first workflow",
+  description: "How Titanbase works without an account or cloud — your schema stays local as a portable .titan.json file.",
+};
+
+# Local-first workflow
+
+Titanbase is **local-first**. The editor runs in your browser, your schema lives as a file on your disk, and exports happen locally. No account is required, and the local product does not need the cloud.
+
+<Callout type="note">
+Your schema stays local. Titanbase does not upload your `.titan.json`, and it does not connect to any live database.
+</Callout>
+
+## What "local-first" means here
+
+- **No account required** — open the editor and start designing.
+- **Your schema stays local** — it is saved as a `.titan.json` file you control.
+- **Works without the cloud** — the editor, `.titan.json`, validation, and exporters all run locally.
+- **No live database connection** — Titanbase designs schemas; it does not read from or write to a running database.
+
+## The everyday loop
+
+1. **Design** — create tables, columns, relations, indexes, and enums in the editor.
+2. **Validate** — review local [diagnostics](/diagnostics) and fix any errors.
+3. **Export** — generate developer-ready PostgreSQL, Mermaid, Prisma, or Drizzle output.
+4. **Save** — write a portable `.titan.json` and commit it to version control.
+
+## Your file is the source of truth
+
+`.titan.json` is plain JSON. Because it is a file you own:
+
+- you can keep it in git and review changes in pull requests;
+- you can reopen it in the editor anytime;
+- you are never locked into a single tool or service.
+
+The editor stores visual-only data (table positions) under `metadata.editor`, separate from the schema's meaning. See the [`.titan.json` format reference](/format) for the full structure.
+
+## Why no cloud is required
+
+The schema engine (`@titanbase/core`), the editor, and the exporters are all client-side. Designing, validating, and exporting never leave your machine.
+
+## Future: an optional cloud layer
+
+<Status value="Planned" />
+
+Titanbase Cloud may become a **future, optional** product layer for teams. It would not be required to use the local editor, `.titan.json`, exporters, or the planned desktop app and CLI. See [Titanbase Cloud](/planned/cloud) for what is being considered.

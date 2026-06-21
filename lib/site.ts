@@ -22,24 +22,31 @@ export const nav: NavGroup[] = [
     title: "Concepts",
     items: [
       { title: "Architecture", href: "/concepts/architecture" },
-      { title: "The IR model", href: "/concepts/ir" },
+      { title: "Local-first workflow", href: "/concepts/local-first" },
+      { title: ".titan.json format", href: "/format" },
+      { title: "Type system", href: "/format/types" },
     ],
   },
   {
     title: "Reference",
     items: [
-      { title: ".titan.json format", href: "/format" },
-      { title: "Type system", href: "/format/types" },
       { title: "Exporters", href: "/exporters" },
-      { title: "CLI", href: "/cli" },
+      { title: "Diagnostics", href: "/diagnostics" },
+      { title: "Plugin API", href: "/plugins" },
     ],
   },
   {
-    title: "Extend",
+    title: "Planned",
     items: [
-      { title: "Plugin API", href: "/plugins" },
-      { title: "Contributing", href: "/contributing" },
+      { title: "PostgreSQL SQL Import", href: "/planned/import" },
+      { title: "CLI", href: "/cli" },
+      { title: "Desktop App", href: "/planned/desktop" },
+      { title: "Titanbase Cloud", href: "/planned/cloud" },
     ],
+  },
+  {
+    title: "Contributing",
+    items: [{ title: "Contributing", href: "/contributing" }],
   },
 ];
 

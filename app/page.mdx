@@ -1,4 +1,4 @@
-import { Cards, Card, Callout } from "@/components/mdx";
+import { Cards, Card, Callout, Status } from "@/components/mdx";
 
 export const metadata = {
   title: "Introduction",
@@ -7,37 +7,70 @@ export const metadata = {
 
 # Introduction
 
-**Titanbase** is an open-source, local-first visual schema designer for relational databases. Design your data model once, save it as a portable `.titan.json` file, and export production-ready SQL and developer-ready schema files to PostgreSQL, MySQL, SQLite, Prisma, Drizzle, and more.
+**Titanbase is an open-source, local-first visual schema designer for relational databases.** Design your schema visually, save it as a portable `.titan.json` file, validate it locally, and export developer-ready PostgreSQL, Mermaid, Prisma, and Drizzle outputs.
 
-Your schema shouldn't be locked to one database, one ORM, or one tool. Titanbase separates the **model** from the **output**.
+Your schema shouldn't be locked to one tool or one workflow. Titanbase keeps the **model** (`.titan.json`) separate from the **output** (generated SQL and schema files), so the file you author stays portable and reviewable.
 
 ```
 ┌─────────────────┐     ┌──────────────┐     ┌──────────────────┐
-│  Visual Editor   │ ──▶ │  .titan.json │ ──▶ │  Export Plugin    │
-│  (replaceable)   │     │  (permanent) │     │  (pure transform) │
+│  Visual Editor   │ ──▶ │  .titan.json │ ──▶ │  Exporter         │
+│                  │     │  (your file) │     │  (pure transform) │
 └─────────────────┘     └──────────────┘     └──────────────────┘
 ```
 
-- The **editor** is one way to create a `.titan.json` — but not the only way.
-- The **CLI** is optional — you can use the schema model directly as a library.
-- **Exporters** are pure functions: schema in, files out — easy to build, easy to swap.
-- **`.titan.json` is the permanent source of truth** — version-controllable, diffable, portable.
+- The **editor** runs locally in your browser — no account, nothing uploaded.
+- **`.titan.json` is your source of truth** — a portable file you keep in version control.
+- **Exporters** are pure functions: schema in, files out.
+
+<Callout type="note">
+Titanbase is local-first. No account is required, and the local product does not need the cloud. Your schema stays local.
+</Callout>
+
+## Available now
+
+<Status value="Available" />
+
+- **Local web editor** — design tables, columns, relations, indexes, and enums on a canvas.
+- **`.titan.json` save / load** — open and save your schema as a portable file.
+- **Validation & diagnostics** — local schema checks before you export.
+- **Export Titan JSON** — the canonical `.titan.json`.
+- **Export PostgreSQL SQL** — `CREATE TABLE`, constraints, indexes, and foreign keys.
+- **Export Mermaid ERD** — an `erDiagram` for Markdown and docs.
+- **Export Prisma schema** — models, enums, and relations.
+- **Export Drizzle (PostgreSQL) schema** — `pgTable`, `pgEnum`, and column builders.
+- **16 example templates** — real-world starting points.
+
+## Planned
+
+<Status value="Planned" />
+
+These are on the roadmap and **not available yet**:
+
+- PostgreSQL `.sql` import (local file import).
+- Schema diff.
+- Desktop app.
+- CLI.
+- DBML, MySQL, and SQLite exporters.
+- Neon / Supabase presets.
+- Cloud collaboration.
+
+See the [Planned](/planned/import) section for details on each.
 
 ## Start here
 
 <Cards>
-  <Card title="Quickstart" href="/quickstart">Install Titanbase and design your first schema in minutes.</Card>
-  <Card title="Architecture" href="/concepts/architecture">How the editor, IR, and exporters fit together.</Card>
+  <Card title="Quickstart" href="/quickstart">Open the editor and design your first schema.</Card>
+  <Card title="Architecture" href="/concepts/architecture">How the editor, core, and exporters fit together.</Card>
   <Card title=".titan.json format" href="/format">The canonical, field-by-field schema reference.</Card>
-  <Card title="Exporters" href="/exporters">Supported targets and platform presets.</Card>
+  <Card title="Exporters" href="/exporters">The exporters available today and what they support.</Card>
 </Cards>
 
 ## Why Titanbase
 
-- **Local-first** — your schemas live as files on your disk. No account, no cloud, works offline.
-- **Open source** — the editor, schema engine, exporters, and CLI are all open under Apache-2.0.
-- **Git-friendly** — deterministic JSON serialization produces clean, reviewable diffs.
-- **No lock-in** — the `.titan.json` format is documented and stable. Export to any target, anytime.
+- **Local-first** — your schemas live as files on your disk. No account, nothing uploaded.
+- **Open source** — the editor, schema engine, and exporters are open under Apache-2.0.
+- **Git-friendly** — `.titan.json` is plain JSON you can review in pull requests.
+- **No lock-in** — the format is documented. Export to a supported target whenever you need to.
 
 <Callout type="tip">
 Titanbase is in active development. Star the <a href="https://github.com/titanbaserun/titanbase">repository</a> to follow progress, or jump straight into the <a href="https://app.titanbase.run">editor</a>.

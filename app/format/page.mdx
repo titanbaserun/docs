@@ -1,264 +1,369 @@
+import { Callout, Status } from "@/components/mdx";
+
 export const metadata = {
   title: ".titan.json format",
-  description: "The canonical reference for the Titanbase IR format, version 1.",
+  description: "The canonical, field-by-field reference for the Titanbase schema format, verified against @titanbase/core.",
 };
 
 # .titan.json format
 
-The Titanbase IR is a JSON format that describes a database schema in a target-agnostic way. It is the single source of truth shared by the editor, CLI, and exporters. This page is the canonical reference for **IR v1**.
+A `.titan.json` file is the Titanbase schema — a portable JSON document shared by the editor and the exporters. This page is the canonical reference, verified against the `TitanSchema` type and Zod schemas in `@titanbase/core`.
+
+The current format version is **`1.0`** (`titanVersion: "1.0"`).
 
 ## File convention
 
 - Extension: `.titan.json`
 - Encoding: UTF-8
-- Serialization: deterministic — keys sorted alphabetically at every level
 - Top level: a single JSON object
+- Saved with 2-space indentation
+
+<Callout type="note">
+There is one concept worth keeping in mind: **semantic schema vs editor metadata**. Tables, columns, relations, and enums describe what the database looks like. Editor metadata (`metadata.editor`) only describes how the schema is laid out on the canvas. Exporters never read editor metadata.
+</Callout>
 
 ## Root object
 
 ```json
 {
-  "$schema": "https://titanbase.run/schema/v1.json",
-  "version": "1.0.0",
-  "name": "my-project",
-  "description": "Optional project description",
+  "titanVersion": "1.0",
+  "project": { "id": "blog", "name": "Blog", "description": "Optional description" },
+  "dialect": "postgres",
   "tables": [],
-  "relations": [],
   "enums": [],
-  "targetHints": {},
-  "metadata": {}
+  "relations": [],
+  "metadata": { "editor": { "tablePositions": {} } }
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `$schema` | string | Yes | JSON Schema URL for validation |
-| `version` | string | Yes | IR format version (semver) |
-| `name` | string | Yes | Project identifier (kebab-case) |
-| `description` | string | No | Human-readable description |
-| `tables` | Table[] | Yes | Table definitions |
-| `relations` | Relation[] | Yes | Relations (may be empty `[]`) |
-| `enums` | EnumDef[] | No | Shared enum type definitions |
-| `targetHints` | object | No | Per-target overrides |
-| `metadata` | object | No | Editor state and timestamps |
+| `titanVersion` | `"1.0"` | Yes | Format version. Must be the literal `"1.0"`. |
+| `project` | object | Yes | Project identity (see below). |
+| `dialect` | enum | Yes | `postgres`, `mysql`, `sqlite`, or `generic`. |
+| `tables` | Table[] | Yes | Table definitions (may be empty `[]`). |
+| `enums` | Enum[] | Yes | Shared enum definitions (may be empty `[]`). |
+| `relations` | Relation[] | Yes | Foreign-key relations (may be empty `[]`). |
+| `metadata` | object | Yes | Editor metadata (see below). |
+
+There is no `$schema` field, no root-level `name`, and no `targetHints` in the current format.
+
+### project
+
+```json
+{ "id": "blog", "name": "Blog", "description": "A simple blog schema" }
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Project identifier. |
+| `name` | string | Yes | Human-readable project name. |
+| `description` | string | No | Optional description. |
+
+### dialect
+
+The `dialect` tells diagnostics which column types to recognize and which warnings to raise (for example, partial indexes are flagged outside PostgreSQL). The exporters available today target PostgreSQL (and PostgreSQL-flavored Prisma/Drizzle); see the [type system](/format/types) and [Exporters](/exporters).
 
 ## Tables
 
 ```json
 {
+  "id": "t_users",
   "name": "users",
+  "schema": "public",
   "description": "Application users",
   "columns": [],
-  "indexes": [],
-  "checks": []
+  "indexes": []
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | Yes | Table name (snake_case) |
-| `description` | string | No | Human-readable description |
-| `columns` | Column[] | Yes | At least one column required |
-| `indexes` | Index[] | No | Secondary indexes |
-| `checks` | CheckConstraint[] | No | Table-level check constraints |
-| `targetHints` | object | No | Per-target table overrides |
+| `id` | string | Yes | Stable table identifier (referenced by relations, indexes, and positions). |
+| `name` | string | Yes | Table name. |
+| `schema` | string | No | Optional namespace (e.g. `public`). |
+| `description` | string | No | Human-readable description. |
+| `columns` | Column[] | Yes | Column definitions. |
+| `indexes` | Index[] | Yes | Index definitions (may be empty `[]`). |
 
-**Naming rules:** `snake_case`, lowercase, 1–63 characters, must start with a letter, characters `a-z 0-9 _`, unique within the schema.
+Both tables and columns have an `id`. Ids are how relations, indexes, and editor positions refer to objects, so they stay stable even if you rename a table or column. There is no `checks` field in the current format.
 
 ## Columns
 
 ```json
 {
+  "id": "c_users_email",
   "name": "email",
-  "type": "string",
-  "maxLength": 255,
+  "type": "text",
   "nullable": false,
+  "primaryKey": false,
   "unique": true,
-  "default": { "kind": "literal", "value": "'unknown'" },
+  "default": "'unknown'",
   "description": "User email address"
 }
 ```
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | Yes | — | Column name (snake_case) |
-| `type` | IRType | Yes | — | Abstract column type |
-| `nullable` | boolean | No | `true` | Allow NULL values |
-| `primaryKey` | boolean | No | `false` | Part of the primary key |
-| `unique` | boolean | No | `false` | Unique constraint |
-| `default` | DefaultValue | No | — | Default value |
-| `description` | string | No | — | Human-readable description |
-| `maxLength` | number | No | — | For `string` |
-| `precision` | number | No | — | For `decimal` |
-| `scale` | number | No | — | For `decimal` |
-| `values` | string[] | No | — | Inline `enum` values |
-| `enumRef` | string | No | — | Reference to a shared enum |
-| `arrayOf` | IRType | No | — | For `array` |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Stable column identifier. |
+| `name` | string | Yes | Column name. |
+| `type` | string | Yes | Column type — a built-in type or an enum name (see [type system](/format/types)). |
+| `nativeType` | string | No | An exact target type to emit instead of mapping `type`. |
+| `nullable` | boolean | Yes | Whether NULL is allowed. |
+| `primaryKey` | boolean | Yes | Whether this column is part of the primary key. |
+| `unique` | boolean | Yes | Whether a unique constraint applies. |
+| `default` | string | No | Default value as a string (see below). |
+| `description` | string | No | Human-readable description. |
 
-See the [type system](/format/types) for the full list of abstract types and how they map to each database.
+`nullable`, `primaryKey`, and `unique` are **required booleans** — set them explicitly. The format has no `maxLength`, `precision`, `scale`, `values`, `enumRef`, or `arrayOf` fields. To pin an exact database type, set `nativeType` (for example `"nativeType": "varchar(255)"`).
+
+### Default values
+
+`default` is a **string**, not an object. It is written the way it would appear in SQL:
+
+```json
+{ "default": "'active'" }              // string literal (quoted)
+{ "default": "0" }                      // numeric literal
+{ "default": "true" }                   // boolean literal
+{ "default": "now()" }                  // function call
+{ "default": "gen_random_uuid()" }      // function call
+```
+
+Diagnostics check that a default looks compatible with the column type, and exporters translate well-known functions (`now()`, `gen_random_uuid()`) into the equivalent for each target.
 
 ## Enums
 
-Shared enum definitions can be reused across columns:
+Shared enum definitions live at the root and are referenced by a column's `type`:
 
 ```json
 {
   "enums": [
-    { "name": "status", "values": ["draft", "published", "archived"] }
+    { "id": "e_status", "name": "status", "values": ["draft", "published", "archived"] }
   ]
 }
 ```
 
-Reference one from a column via `enumRef`:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Stable enum identifier. |
+| `name` | string | Yes | Enum name. Used as a column `type` to reference it. |
+| `values` | string[] | Yes | At least one value. |
+| `description` | string | No | Human-readable description. |
+
+To use an enum, set a column's `type` to the enum's `name`:
 
 ```json
-{ "name": "status", "type": "enum", "enumRef": "status" }
+{ "id": "c_posts_status", "name": "status", "type": "status", "nullable": false, "primaryKey": false, "unique": false }
 ```
 
-**Type resolution priority:** `enumRef` → inline `values` → the `type` field.
+There is no `enumRef` field — the reference is the `type` string matching an enum `name`.
 
 ## Relations
 
+Relations are stored at the root (not inside tables). Endpoints are `from` (the foreign-key side) and `to` (the referenced side), and each endpoint names a table id and one or more column ids — so composite keys are supported.
+
 ```json
 {
-  "name": "posts_author",
-  "from": { "table": "posts", "column": "author_id" },
-  "to": { "table": "users", "column": "id" },
-  "type": "many-to-one",
+  "id": "r_posts_author",
+  "name": "posts_author_id_fkey",
+  "from": { "table": "t_posts", "columns": ["c_posts_author_id"] },
+  "to": { "table": "t_users", "columns": ["c_users_id"] },
+  "cardinality": "many-to-one",
   "onDelete": "cascade",
   "onUpdate": "no-action"
 }
 ```
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | No | auto | Relation identifier |
-| `from` | TableColumn | Yes | — | FK side (child) |
-| `to` | TableColumn | Yes | — | PK side (parent) |
-| `type` | RelationType | Yes | — | Cardinality |
-| `onDelete` | FKAction | No | `no-action` | Delete behavior |
-| `onUpdate` | FKAction | No | `no-action` | Update behavior |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Stable relation identifier. |
+| `name` | string | Yes | Relation / constraint name. |
+| `from` | endpoint | Yes | `{ table, columns[] }` — the foreign-key side. |
+| `to` | endpoint | Yes | `{ table, columns[] }` — the referenced side. |
+| `cardinality` | enum | Yes | `one-to-one`, `one-to-many`, `many-to-one`, `many-to-many`. |
+| `onDelete` | enum | No | Referential action (see below). |
+| `onUpdate` | enum | No | Referential action (see below). |
 
-**Relation types:** `one-to-one`, `one-to-many`, `many-to-one`, `many-to-many`.
+Endpoint columns reference **column ids**, and `table` references a **table id**. The two endpoints must have the same number of columns.
 
-**FK actions:** `cascade`, `set-null`, `restrict`, `no-action`.
+**Referential actions:** `cascade`, `restrict`, `set-null`, `set-default`, `no-action`.
 
-### Many-to-many join tables
-
-For `many-to-many` relations, you can override the join table:
-
-```json
-{
-  "type": "many-to-many",
-  "from": { "table": "posts", "column": "id" },
-  "to": { "table": "tags", "column": "id" },
-  "joinTable": {
-    "name": "posts_tags",
-    "extraColumns": [
-      { "name": "assigned_at", "type": "timestamp",
-        "default": { "kind": "function", "value": "now()" } }
-    ]
-  }
-}
-```
-
-If `joinTable` is omitted, exporters generate a default join table named `{from_table}_{to_table}` with two FK columns and a composite primary key.
+<Callout type="note">
+The format does not include a join-table field for many-to-many relations. For portable output, model a many-to-many relationship with an explicit join table and two `many-to-one` relations; diagnostics will warn on a bare `many-to-many`.
+</Callout>
 
 ## Indexes
 
+Indexes are stored **inside their table's `indexes` array**, and each index also records the `table` id it belongs to. Index `columns` reference **column ids** (order matters).
+
 ```json
 {
+  "id": "i_users_email",
   "name": "idx_users_email",
-  "columns": ["email"],
+  "table": "t_users",
+  "columns": ["c_users_email"],
   "unique": true,
-  "where": "deleted_at IS NULL"
+  "method": "btree",
+  "where": "deleted_at IS NULL",
+  "description": "Active users by email"
 }
 ```
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | No | auto | Index name |
-| `columns` | string[] | Yes | — | Column names (order matters) |
-| `unique` | boolean | No | `false` | Unique index |
-| `where` | string | No | — | Partial index condition (PostgreSQL / SQLite only) |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Stable index identifier. |
+| `name` | string | Yes | Index name. |
+| `table` | string | Yes | Owning table id (must match the table). |
+| `columns` | string[] | Yes | Column ids (at least one, order matters). |
+| `unique` | boolean | Yes | Whether the index is unique. |
+| `method` | string | No | Index method (e.g. `btree`, `gin`). |
+| `where` | string | No | Partial-index predicate (PostgreSQL). |
+| `description` | string | No | Human-readable description. |
 
-## Check constraints
+A `where` predicate is PostgreSQL-specific; diagnostics warn when the dialect is not PostgreSQL.
 
-```json
-{ "name": "chk_positive_price", "expression": "price > 0" }
-```
+## Editor metadata
 
-Expressions use SQL syntax. Each exporter validates compatibility with its target.
-
-## Default values
-
-```json
-{ "kind": "literal", "value": "'active'" }
-{ "kind": "literal", "value": "0" }
-{ "kind": "function", "value": "now()" }
-{ "kind": "function", "value": "gen_random_uuid()" }
-{ "kind": "expression", "value": "price * 0.1" }
-```
-
-Exporters map function names to target-specific equivalents — for example `now()` becomes `NOW()` in MySQL and `datetime('now')` in SQLite.
-
-## Target hints
-
-Target hints carry engine-specific overrides without polluting the core schema. Each exporter reads only its own key and silently ignores the rest.
-
-```json
-{
-  "targetHints": {
-    "supabase": {
-      "rls": {
-        "users": {
-          "enabled": true,
-          "policies": [
-            { "name": "users_own_data", "operation": "ALL", "using": "auth.uid() = id" }
-          ]
-        }
-      }
-    },
-    "neon": { "branching": { "defaultBranch": "main" } }
-  }
-}
-```
-
-## Metadata
-
-Editor-only data that does not affect schema semantics. It is **never** read by exporters.
+`metadata.editor.tablePositions` stores canvas positions, **keyed by table id**. This is editor-only data; exporters ignore it.
 
 ```json
 {
   "metadata": {
-    "createdAt": "2026-04-10T12:00:00Z",
-    "updatedAt": "2026-04-10T14:30:00Z",
     "editor": {
-      "canvasZoom": 1.0,
       "tablePositions": {
-        "users": { "x": 100, "y": 200 },
-        "posts": { "x": 400, "y": 200 }
-      },
-      "tableColors": { "users": "#4A90D9" }
+        "t_users": { "x": 100, "y": 120 },
+        "t_posts": { "x": 460, "y": 120 }
+      }
     }
   }
 }
 ```
 
-## Validation rules
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `editor` | object | Yes | Editor metadata container. |
+| `editor.tablePositions` | record | Yes | Map of table id → `{ x, y }` (finite numbers). |
 
-A valid `.titan.json` must satisfy all of the following:
+Positions are keyed by **table id**, not table name, so renaming a table keeps its layout.
 
-1. All required fields are present.
-2. `version` is a valid semver string.
-3. All table names are unique.
-4. All column names are unique within their table.
-5. Each table has at least one column.
-6. At most one primary key configuration per table (single or composite).
-7. All relation references point to existing tables and columns.
-8. All `enumRef` values reference existing entries in `enums[]`.
-9. All `arrayOf` values are valid IR types.
-10. All index `where` expressions are syntactically valid SQL fragments.
-11. No circular `many-to-many` join table references.
+## Examples
 
-Validation is performed by `@titanbase/core` and is a prerequisite for export.
+### Minimal valid schema
+
+```json
+{
+  "titanVersion": "1.0",
+  "project": { "id": "minimal", "name": "Minimal" },
+  "dialect": "postgres",
+  "tables": [
+    {
+      "id": "t_users",
+      "name": "users",
+      "columns": [
+        { "id": "c_users_id", "name": "id", "type": "uuid", "nullable": false, "primaryKey": true, "unique": false }
+      ],
+      "indexes": []
+    }
+  ],
+  "enums": [],
+  "relations": [],
+  "metadata": { "editor": { "tablePositions": { "t_users": { "x": 0, "y": 0 } } } }
+}
+```
+
+### Two related tables
+
+```json
+{
+  "titanVersion": "1.0",
+  "project": { "id": "blog", "name": "Blog" },
+  "dialect": "postgres",
+  "tables": [
+    {
+      "id": "t_users",
+      "name": "users",
+      "columns": [
+        { "id": "c_users_id", "name": "id", "type": "uuid", "nullable": false, "primaryKey": true, "unique": false, "default": "gen_random_uuid()" },
+        { "id": "c_users_email", "name": "email", "type": "text", "nullable": false, "primaryKey": false, "unique": true }
+      ],
+      "indexes": []
+    },
+    {
+      "id": "t_posts",
+      "name": "posts",
+      "columns": [
+        { "id": "c_posts_id", "name": "id", "type": "uuid", "nullable": false, "primaryKey": true, "unique": false, "default": "gen_random_uuid()" },
+        { "id": "c_posts_author_id", "name": "author_id", "type": "uuid", "nullable": false, "primaryKey": false, "unique": false },
+        { "id": "c_posts_title", "name": "title", "type": "text", "nullable": false, "primaryKey": false, "unique": false }
+      ],
+      "indexes": [
+        { "id": "i_posts_author", "name": "idx_posts_author_id", "table": "t_posts", "columns": ["c_posts_author_id"], "unique": false }
+      ]
+    }
+  ],
+  "enums": [],
+  "relations": [
+    {
+      "id": "r_posts_author",
+      "name": "posts_author_id_fkey",
+      "from": { "table": "t_posts", "columns": ["c_posts_author_id"] },
+      "to": { "table": "t_users", "columns": ["c_users_id"] },
+      "cardinality": "many-to-one",
+      "onDelete": "cascade"
+    }
+  ],
+  "metadata": {
+    "editor": {
+      "tablePositions": {
+        "t_users": { "x": 80, "y": 80 },
+        "t_posts": { "x": 460, "y": 80 }
+      }
+    }
+  }
+}
+```
+
+### Enum
+
+```json
+{
+  "enums": [
+    { "id": "e_status", "name": "post_status", "values": ["draft", "published", "archived"] }
+  ],
+  "tables": [
+    {
+      "id": "t_posts",
+      "name": "posts",
+      "columns": [
+        { "id": "c_posts_id", "name": "id", "type": "uuid", "nullable": false, "primaryKey": true, "unique": false },
+        { "id": "c_posts_status", "name": "status", "type": "post_status", "nullable": false, "primaryKey": false, "unique": false, "default": "'draft'" }
+      ],
+      "indexes": []
+    }
+  ]
+}
+```
+
+### Index
+
+```json
+{
+  "id": "i_users_email",
+  "name": "uq_users_email",
+  "table": "t_users",
+  "columns": ["c_users_email"],
+  "unique": true
+}
+```
+
+## Serialization and versioning
+
+- Titan JSON export is produced with `JSON.stringify(schema, null, 2)` — readable, 2-space-indented JSON.
+- On load, `@titanbase/core` **normalizes** a schema: it trims string fields and sorts the `tables`, `enums`, and `relations` arrays by name. This keeps related schemas consistent, though object key order is not alphabetized, so do not assume byte-identical output across tools.
+- The format is versioned by `titanVersion`. The current version is `"1.0"`; a file with any other value is rejected with a clear diagnostic.
+
+## JSON Schema
+
+<Status value="Planned" />
+
+A published JSON Schema file for static validation is **planned but not available yet**. Today, validation is performed in code by `@titanbase/core` (Zod schemas plus diagnostics). See [Diagnostics](/diagnostics).

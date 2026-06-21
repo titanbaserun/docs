@@ -1,68 +1,54 @@
+import { Callout, Status } from "@/components/mdx";
+
 export const metadata = {
-  title: "CLI",
-  description: "The Titanbase command-line interface for validating, exporting, importing, and diffing schemas.",
+  title: "CLI — Planned",
+  description: "A Titanbase command-line interface is on the roadmap. It is not available yet.",
 };
 
 # CLI
 
-The CLI provides headless access to the same schema engine and exporters the editor uses — ideal for terminal workflows and CI/CD. It is built on the public `@titanbase/core` API.
+<Status value="Planned" />
 
-```bash
-npx titanbase <command> [options]
+A Titanbase command-line interface is part of the roadmap. **It is not available yet** — there is no `titanbase` package to install, and the commands below are a planned design sketch, not a shipped API.
+
+<Callout type="warning">
+Do not try to <code>npm install -g titanbase</code> or <code>npx titanbase</code> — the package does not exist yet. In the meantime, the same operations are available by importing <code>@titanbase/core</code> and the exporter packages directly in a script.
+</Callout>
+
+## Planned commands
+
+These are the commands being considered (planned API sketch — names and flags may change):
+
+- `titanbase validate` — validate a `.titan.json` and exit non-zero on errors, for CI gates.
+- `titanbase export` — generate output for an available target.
+- `titanbase import` — bring an existing schema into `.titan.json` (see [PostgreSQL SQL Import](/planned/import)).
+- `titanbase diff` — compare two `.titan.json` versions structurally.
+
+## Planned use cases
+
+- **CI validation** — fail a build when a schema has errors.
+- **Deterministic exports** — generate schema files as part of a pipeline.
+- **Schema diff checks** — detect structural changes between versions.
+- **Automation** — script schema operations without the editor.
+
+## Today: use the library directly
+
+Until the CLI ships, you can run the same logic from a Node script:
+
+```typescript
+import { validateTitanSchema } from "@titanbase/core";
+import { exportPostgres } from "@titanbase/export-postgres";
+
+const schema = JSON.parse(await readFile("schema.titan.json", "utf8"));
+
+const { success, diagnostics } = validateTitanSchema(schema);
+if (!success) {
+  for (const d of diagnostics) console.error(`${d.severity} ${d.code}: ${d.message}`);
+  process.exit(1);
+}
+
+const { sql } = exportPostgres(schema);
+await writeFile("schema.sql", sql);
 ```
 
-## validate
-
-Validate a schema against the IR rules. Exits non-zero on failure, so it works well as a CI gate.
-
-```bash
-titanbase validate schema.titan.json
-```
-
-## export
-
-Generate target-specific files from a schema.
-
-```bash
-# Single target
-titanbase export schema.titan.json --target postgres
-
-# Multiple targets
-titanbase export schema.titan.json --target postgres,mysql,sqlite
-
-# Platform preset
-titanbase export schema.titan.json --target supabase
-```
-
-Available targets include `postgres`, `mysql`, `sqlite`, `prisma`, `drizzle`, `mermaid`, and the `neon` and `supabase` presets.
-
-## import
-
-Bring an existing schema into the IR.
-
-```bash
-# From a SQL file
-titanbase import --from sql schema.sql
-
-# From a Prisma schema
-titanbase import --from prisma prisma/schema.prisma
-
-# From a live database (introspection)
-titanbase import --from postgres --connection <url>
-```
-
-Unsupported statements are reported as import warnings; the importer preserves comments, defaults, indexes, enums, and referential actions where possible.
-
-## diff
-
-Compare two schema versions structurally.
-
-```bash
-titanbase diff old.titan.json new.titan.json
-```
-
-The diff reports added, removed, and changed objects with stable object matching and basic rename detection.
-
-<blockquote>
-The CLI ships alongside the stabilized public API. Until then, the same operations are available by importing <code>@titanbase/core</code> and the exporter packages directly.
-</blockquote>
+The CLI will package this kind of workflow once the public API is stabilized.

@@ -1,26 +1,70 @@
+import { Callout, Status } from "@/components/mdx";
+
 export const metadata = {
   title: "Quickstart",
-  description: "Install Titanbase, design a schema, and export it to your database of choice.",
+  description: "Open the local editor, design a schema, validate it, and export developer-ready output.",
 };
 
 # Quickstart
 
-This guide takes you from zero to an exported SQL schema in a few minutes.
+This guide takes you from a blank canvas to exported, developer-ready output — entirely in your browser. No account, nothing uploaded.
 
-## Use the editor
+## 1. Open the editor
 
-The fastest way to start is the visual editor — no install required.
+The editor runs locally in your browser. Open it and you are ready to design:
 
-1. Open the [editor](https://app.titanbase.run).
-2. Start from a blank schema or pick a template.
-3. Add tables, columns, and relations on the canvas.
-4. Open the **Export** panel, choose a target, and copy or download the result.
+- Go to the [editor](https://app.titanbase.run).
 
-Your work is saved locally as a `.titan.json` file. There is no account and nothing is uploaded.
+Your work stays on your machine. There is no sign-up and nothing is sent to a server.
 
-## Run it locally
+## 2. Start from blank or a template
 
-To run the editor and tooling from source:
+- Start with a **blank schema**, or
+- Pick one of the **16 example templates** (blog, ecommerce, CRM, SaaS, and more) as a starting point.
+
+## 3. Design your schema
+
+On the canvas you can:
+
+- Create **tables** and add **columns** with types and constraints.
+- Add **relations** (foreign keys) between tables.
+- Define **indexes** on a table.
+- Define shared **enums** and use them as a column type.
+
+## 4. Validate
+
+Titanbase validates your schema locally as you work. Open the diagnostics to review:
+
+- **Errors** — fix these before exporting (for example, a nullable primary key or a relation pointing at a missing column).
+- **Warnings** — portability or safety hints (for example, a table without a primary key, or an unindexed foreign key).
+
+See the [Diagnostics reference](/diagnostics) for the full list.
+
+## 5. Export
+
+Open the export panel and choose a target:
+
+| Target | Output file |
+|--------|-------------|
+| Titan JSON | `<project>.titan.json` |
+| PostgreSQL SQL | `<project>.sql` |
+| Mermaid ERD | `<project>.mmd` |
+| Prisma schema | `schema.prisma` |
+| Drizzle (PostgreSQL) schema | `schema.ts` |
+
+Copy the output or download the file. Each exporter also reports any warnings so you can review them before applying the result. See [Exporters](/exporters) for what each target supports.
+
+## 6. Save your `.titan.json`
+
+Save your schema as a portable `.titan.json` file. This is your source of truth — keep it in version control and reopen it anytime.
+
+<Callout type="tip">
+`.titan.json` is plain JSON. You can review it in pull requests and open it again in the editor later. Learn the structure in the <a href="/format">format reference</a>.
+</Callout>
+
+## Run the editor from source
+
+Prefer to run it yourself? The project is open source:
 
 ```bash
 git clone https://github.com/titanbaserun/titanbase
@@ -29,61 +73,38 @@ pnpm install
 pnpm dev
 ```
 
-Requirements: Node.js 20+ and pnpm 9+.
-
-## Use the CLI
-
-The CLI is the headless path — ideal for CI and scripts.
-
-```bash
-# Validate a schema
-npx titanbase validate schema.titan.json
-
-# Export to PostgreSQL
-npx titanbase export schema.titan.json --target postgres
-
-# Export to multiple targets at once
-npx titanbase export schema.titan.json --target postgres,mysql,sqlite
-```
-
-See the [CLI reference](/cli) for all commands.
+Requirements: Node.js 20+ and pnpm. See [Contributing](/contributing) for the full local setup.
 
 ## A minimal schema
 
-A `.titan.json` is just JSON. Here is a complete, valid two-table schema:
+A `.titan.json` is just JSON. Here is a complete, valid single-table schema:
 
 ```json
 {
-  "$schema": "https://titanbase.run/schema/v1.json",
-  "version": "1.0.0",
-  "name": "blog",
+  "titanVersion": "1.0",
+  "project": { "id": "blog", "name": "Blog" },
+  "dialect": "postgres",
   "tables": [
     {
+      "id": "t_users",
       "name": "users",
       "columns": [
-        { "name": "id", "type": "uuid", "primaryKey": true,
-          "default": { "kind": "function", "value": "gen_random_uuid()" } },
-        { "name": "email", "type": "string", "maxLength": 255, "unique": true, "nullable": false }
-      ]
-    },
-    {
-      "name": "posts",
-      "columns": [
-        { "name": "id", "type": "uuid", "primaryKey": true },
-        { "name": "author_id", "type": "uuid", "nullable": false },
-        { "name": "title", "type": "string", "maxLength": 200 }
-      ]
+        { "id": "c_users_id", "name": "id", "type": "uuid", "nullable": false, "primaryKey": true, "unique": false, "default": "gen_random_uuid()" },
+        { "id": "c_users_email", "name": "email", "type": "text", "nullable": false, "primaryKey": false, "unique": true }
+      ],
+      "indexes": []
     }
   ],
-  "relations": [
-    {
-      "from": { "table": "posts", "column": "author_id" },
-      "to": { "table": "users", "column": "id" },
-      "type": "many-to-one",
-      "onDelete": "cascade"
-    }
-  ]
+  "enums": [],
+  "relations": [],
+  "metadata": { "editor": { "tablePositions": { "t_users": { "x": 100, "y": 120 } } } }
 }
 ```
+
+## Planned: CLI and import
+
+<Status value="Planned" />
+
+A [CLI](/cli) and [PostgreSQL SQL import](/planned/import) are on the roadmap but **not available yet**. The current quickstart path is the browser editor. Today the same operations are available as library functions by importing `@titanbase/core` and the exporter packages directly.
 
 Next, learn how the pieces fit together in [Architecture](/concepts/architecture), or dive into the full [format reference](/format).
