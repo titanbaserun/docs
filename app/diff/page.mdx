@@ -1,0 +1,66 @@
+import { Callout, Status } from "@/components/mdx";
+
+export const metadata = {
+  title: "Schema diff & migrations",
+  description: "Compare two .titan.json schemas and generate PostgreSQL migration drafts — with destructive-change warnings and downloadable SQL.",
+};
+
+# Schema diff & migrations
+
+<Status value="Available" />
+
+Titanbase can compare two `.titan.json` schemas and turn the difference into a PostgreSQL migration draft. The diff engine lives in `@titanbase/core`; the migration draft generator lives in `@titanbase/export-postgres`. Both are deterministic and run entirely locally.
+
+## Schema diff
+
+`diffSchemas()` produces a structured, framework-independent diff between two schemas:
+
+```typescript
+import { diffSchemas } from "@titanbase/core";
+
+const result = diffSchemas(oldSchema, newSchema);
+// result.changes  — project, table, column, relation, index, enum, enum-value changes
+// result.summary  — added / removed / changed counters
+```
+
+- **Stable matching** with conservative rename detection, so a renamed table reads as a rename rather than a drop-plus-add.
+- **Classification** of each change as destructive and/or breaking, with matching warnings.
+- **Summary counters** and semantic metadata filtering, so editor-only changes (like table positions) never show up as schema changes.
+
+### In the editor
+
+Use the **Compare** action to open the schema diff modal. It groups changes by object, shows severity badges, and displays before/after values. Clicking a change selects the related object, and invalid files are handled gracefully.
+
+## PostgreSQL migration drafts
+
+`generatePostgresMigrationDraft()` turns a diff into draft SQL:
+
+```typescript
+import { diffSchemas } from "@titanbase/core";
+import { generatePostgresMigrationDraft } from "@titanbase/export-postgres";
+
+const diff = diffSchemas(oldSchema, newSchema);
+const { sql, warnings } = generatePostgresMigrationDraft(diff);
+```
+
+It produces draft SQL for table, column, constraint, foreign-key, index, enum-addition, rename, and comment changes.
+
+<Callout type="warning">
+A migration draft is a <strong>starting point, not a finished migration</strong>. Review it before running it against a real database — Titanbase flags destructive and breaking changes, but you own the final SQL.
+</Callout>
+
+Each draft carries destructive and breaking metadata plus explicit review warnings for:
+
+- potential data loss,
+- type casts,
+- inferred constraint names,
+- locking behavior,
+- enum limitations.
+
+### In the editor
+
+From the Schema Diff modal you can open the **migration preview**, review the warnings, copy the SQL, or download a `.sql` file.
+
+## Scope
+
+This is a foundation: it targets **PostgreSQL** and generates **drafts** for review. It does not run migrations, connect to a database, or manage migration history — those remain out of scope for the local-first product.

@@ -1,0 +1,66 @@
+import { Callout, Status } from "@/components/mdx";
+
+export const metadata = {
+  title: "SQL import",
+  description: "Import an existing PostgreSQL .sql file into a portable .titan.json schema. Local file import only — no database connection.",
+};
+
+# SQL import
+
+<Status value="Available" />
+
+Titanbase can import an existing PostgreSQL `.sql` file into a `.titan.json` schema, powered by the `@titanbase/import-postgres` package. Open the result in the editor and export it to any supported target.
+
+<Callout type="note">
+Import is <strong>local file import only</strong> — you point it at a `.sql` file. It does <strong>not</strong> connect to a live database and never asks for credentials. Your schema stays on your machine.
+</Callout>
+
+## In the editor
+
+You can import a `.sql` file from several entry points:
+
+- the **start screen** (Import SQL card),
+- the **toolbar** Import action,
+- the **empty canvas** quick actions,
+- the **Project Overview** panel.
+
+Unsupported statements are collected into a non-blocking **import report** — the import never silently drops something without telling you, and a failed parse preserves your current schema rather than discarding it.
+
+## Supported PostgreSQL DDL
+
+The importer is deterministic and browser-safe. It understands a practical subset of PostgreSQL DDL:
+
+- `CREATE TYPE ... AS ENUM` → enums
+- `CREATE TABLE` → tables and columns
+- Column and table constraints, primary keys, and unique constraints
+- Foreign keys with referential actions
+- Indexes
+- `COMMENT ON` → descriptions
+- Quoted identifiers and schema-qualified names
+
+Comments, defaults, indexes, enums, and referential actions are preserved where possible.
+
+## Warnings
+
+Anything outside the supported subset is reported as a **line-aware warning** instead of failing the whole file — for example unsupported statements, expression indexes, unsupported constraints, and unresolved references. You review the report and decide what to fix by hand.
+
+## Using the library
+
+`@titanbase/import-postgres` can be used directly in a script:
+
+```typescript
+import { importPostgres } from "@titanbase/import-postgres";
+
+const sql = await readFile("dump.sql", "utf8");
+const { schema, warnings } = importPostgres(sql);
+
+for (const w of warnings) console.warn(`line ${w.line}: ${w.message}`);
+await writeFile("schema.titan.json", JSON.stringify(schema, null, 2));
+```
+
+## Not supported
+
+- Live database connections.
+- Reading credentials or connection strings.
+
+Live database import is part of the much later, optional [Titanbase Cloud](/planned/cloud) thinking — not the local importer.

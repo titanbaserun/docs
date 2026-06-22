@@ -2,6 +2,22 @@
 
 All notable changes to the Titanbase documentation site are documented here.
 
+## [0.3.0] — June 2026
+
+### Added
+
+- SQL import reference page (`/import`) documenting `@titanbase/import-postgres`: editor entry points, the supported PostgreSQL DDL subset, line-aware warnings, and library usage.
+- Schema diff & migrations reference page (`/diff`) documenting `diffSchemas()` in `@titanbase/core` and `generatePostgresMigrationDraft()` in `@titanbase/export-postgres`, including destructive/breaking warnings and the editor Compare flow.
+
+### Changed
+
+- Moved PostgreSQL SQL import from Planned to **Available** (shipped in product 0.4.0).
+- Moved schema diff and PostgreSQL migration drafts to **Available** (shipped in product 0.5.0).
+- Updated Architecture: `@titanbase/import-postgres` is now implemented; schema diff lives in `@titanbase/core`; migration drafts live in `@titanbase/export-postgres`.
+- Updated navigation, Introduction, Quickstart, and CLI pages to reflect the shipped import and diff capabilities.
+
+[0.3.0]: https://github.com/titanbaserun/docs/releases/tag/v0.3.0
+
 ## [0.2.0] — June 2026
 
 ### Added

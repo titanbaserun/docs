@@ -30,6 +30,7 @@ The local product never requires the cloud.
 - the **Zod schemas** that parse and structurally validate a file;
 - **diagnostics** — semantic checks beyond structural parsing (see [Diagnostics](/diagnostics));
 - **normalization** — a canonical form that trims strings and sorts tables, enums, and relations by name;
+- the **schema diff** engine (`diffSchemas`) that powers Compare and migration drafts (see [Schema diff & migrations](/diff));
 - the shared **export result types** (`ExportFile`, `ExportWarning`, `ExportResult`) that exporters return.
 
 React and editor code display schema state and diagnostics, but they do not own core validation logic — that lives in `@titanbase/core` so every consumer (editor and exporters) shares one source of truth.
@@ -79,13 +80,14 @@ These packages are implemented today:
 
 | Package | Responsibility |
 |---------|----------------|
-| `@titanbase/core` | Schema types, normalization, validation, diagnostics, export result types |
+| `@titanbase/core` | Schema types, normalization, validation, diagnostics, schema diff, export result types |
 | `@titanbase/editor` | Visual editor (React) |
 | `@titanbase/ui` | Shared UI components |
-| `@titanbase/export-postgres` | PostgreSQL SQL exporter |
+| `@titanbase/export-postgres` | PostgreSQL SQL exporter and migration drafts |
 | `@titanbase/export-mermaid` | Mermaid ER diagram exporter |
 | `@titanbase/export-prisma` | Prisma schema exporter |
 | `@titanbase/export-drizzle` | Drizzle (PostgreSQL) schema exporter |
+| `@titanbase/import-postgres` | PostgreSQL `.sql` → schema importer |
 | `apps/web` | The web application that hosts the editor |
 
 ### Planned packages
@@ -96,8 +98,6 @@ These are on the roadmap and **not implemented yet**:
 
 | Package | Responsibility |
 |---------|----------------|
-| `@titanbase/import-postgres` | PostgreSQL `.sql` → schema importer |
-| `@titanbase/diff` | Structural schema diff |
 | `@titanbase/cli` | Command-line tool |
 | `@titanbase/export-dbml` | DBML exporter |
 | `@titanbase/export-mysql` | MySQL exporter |

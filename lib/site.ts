@@ -31,6 +31,8 @@ export const nav: NavGroup[] = [
     title: "Reference",
     items: [
       { title: "Exporters", href: "/exporters" },
+      { title: "SQL import", href: "/import" },
+      { title: "Schema diff & migrations", href: "/diff" },
       { title: "Diagnostics", href: "/diagnostics" },
       { title: "Plugin API", href: "/plugins" },
     ],
@@ -38,7 +40,6 @@ export const nav: NavGroup[] = [
   {
     title: "Planned",
     items: [
-      { title: "PostgreSQL SQL Import", href: "/planned/import" },
       { title: "CLI", href: "/cli" },
       { title: "Desktop App", href: "/planned/desktop" },
       { title: "Titanbase Cloud", href: "/planned/cloud" },

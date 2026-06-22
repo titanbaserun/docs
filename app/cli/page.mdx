@@ -21,8 +21,8 @@ These are the commands being considered (planned API sketch — names and flags 
 
 - `titanbase validate` — validate a `.titan.json` and exit non-zero on errors, for CI gates.
 - `titanbase export` — generate output for an available target.
-- `titanbase import` — bring an existing schema into `.titan.json` (see [PostgreSQL SQL Import](/planned/import)).
-- `titanbase diff` — compare two `.titan.json` versions structurally.
+- `titanbase import` — bring an existing schema into `.titan.json` (the [SQL import](/import) library already ships).
+- `titanbase diff` — compare two `.titan.json` versions structurally (the [schema diff](/diff) library already ships).
 
 ## Planned use cases
 
@@ -51,4 +51,4 @@ const { sql } = exportPostgres(schema);
 await writeFile("schema.sql", sql);
 ```
 
-The CLI will package this kind of workflow once the public API is stabilized.
+The CLI will package this kind of workflow once the public API is stabilized. The [SQL import](/import) and [schema diff](/diff) libraries are already usable from scripts today.
