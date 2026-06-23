@@ -1,0 +1,58 @@
+import { Callout, Status } from "@/components/mdx";
+
+export const metadata = {
+  title: "Desktop app",
+  description: "Titanbase ships as a free, open-source Electron desktop app for macOS, Windows, and Linux — local-first and offline.",
+};
+
+# Desktop app
+
+<Status value="Available" />
+
+Titanbase ships as a free, open-source **Electron** desktop app (`apps/desktop`) for macOS, Windows, and Linux. It runs the same local-first visual editor you use in the browser, with native file handling and full offline support.
+
+<Callout type="note">
+The desktop app loads its <strong>bundled local renderer</strong> in production — it does not depend on the hosted website. Your schema stays on your machine, with no account and no cloud backend.
+</Callout>
+
+## What it does
+
+- Native **open, save, and Save As** for `.titan.json` files through OS dialogs.
+- Local PostgreSQL **`.sql` import**, schema **compare**, and **migration-draft export**.
+- All schema export workflows (PostgreSQL, Mermaid, Prisma, Drizzle).
+- Native **application menus and keyboard shortcuts**.
+- **Recent files**, OS file-open events, and **drag and drop** of `.titan.json` and `.sql` files.
+- **Unsaved-change prompts** for new, open, import, drag/drop, recent files, and close.
+- A larger default window and draggable title-bar regions.
+
+## Security model
+
+The desktop shell is locked down by default:
+
+- **Context isolation** enabled.
+- **Renderer sandboxing** enabled, **Node integration disabled**.
+- A **narrow, typed preload bridge** is the only channel between the renderer and the system.
+
+## Install
+
+Packaging targets are configured with Electron Builder:
+
+- macOS — `dmg` / `zip`
+- Windows — `nsis`
+- Linux — `AppImage` / `deb`
+
+<Callout type="warning">
+Signed and notarized installers and automatic updates are still in progress. For now, build the app from source.
+</Callout>
+
+```bash
+git clone https://github.com/titanbaserun/titanbase
+cd titanbase
+pnpm install
+pnpm --filter titanbase-desktop build
+```
+
+## Limitations
+
+- No signed/notarized installers or auto-update yet.
+- File-change detection and crash-safe local drafts are still on the [roadmap](https://titanbase.run/roadmap).

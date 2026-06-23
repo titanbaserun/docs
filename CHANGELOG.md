@@ -2,6 +2,24 @@
 
 All notable changes to the Titanbase documentation site are documented here.
 
+## [0.4.0] — June 2026
+
+### Added
+
+- Desktop app reference page (`/desktop`) documenting the free, open-source Electron app: native file handling, SQL import, compare, migration export, the security model, install/build, and limitations.
+
+### Changed
+
+- Moved the desktop app from Planned to **Available** (shipped as `titanbase-desktop@0.1.0`).
+- Added `apps/desktop` to the implemented packages in Architecture.
+- Updated the Introduction and navigation to list the desktop app under Reference.
+
+### Removed
+
+- The `/planned/desktop` page (superseded by the available `/desktop` reference).
+
+[0.4.0]: https://github.com/titanbaserun/docs/releases/tag/v0.4.0
+
 ## [0.3.0] — June 2026
 
 ### Added
